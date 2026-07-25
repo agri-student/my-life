@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { MoneyProvider } from './store/MoneyProvider.tsx'
+import { registerServiceWorker } from './lib/registerServiceWorker.ts'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -11,3 +12,5 @@ createRoot(document.getElementById('root')!).render(
     </MoneyProvider>
   </StrictMode>,
 )
+
+registerServiceWorker()

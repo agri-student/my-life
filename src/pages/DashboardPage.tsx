@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { CategoryShareChart } from '../components/charts/CategoryShareChart'
+import { MonthlyTrendChart } from '../components/charts/MonthlyTrendChart'
 import { BalanceHero } from '../components/dashboard/BalanceHero'
 import { MonthSwitcher } from '../components/dashboard/MonthSwitcher'
 import { ItemCard } from '../components/items/ItemCard'
@@ -14,6 +15,7 @@ import {
   dailyPace,
   itemProgress,
   monthSummary,
+  monthlyTotals,
   totalBalance,
   transactionsOfMonth,
 } from '../lib/stats'
@@ -45,6 +47,8 @@ export function DashboardPage({
     () => transactionsOfMonth(transactions, month).slice(0, 5),
     [transactions, month],
   )
+  const trend = useMemo(() => monthlyTotals(transactions, month, 6), [transactions, month])
+  const hasTrend = trend.some((row) => row.income > 0 || row.expense > 0)
 
   // 「あと少しで買える」ものを 2 件だけ前に出す（進み方の多い順）
   const nextTargets = useMemo(
@@ -89,6 +93,13 @@ export function DashboardPage({
           />
         )}
       </Card>
+
+      {hasTrend && (
+        <Card>
+          <CardHeader title="月ごとの収支" hint="棒をタップするとその月に切りかえられます" />
+          <MonthlyTrendChart rows={trend} selectedMonth={month} onSelectMonth={onMonthChange} />
+        </Card>
+      )}
 
       {nextTargets.length > 0 && (
         <Card>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="おこづかい帳">
+  <rect width="512" height="512" rx="112" fill="#2a78d6" />
+  <!-- 貯金箱をイメージした円と、コインを入れるスリット -->
+  <circle cx="256" cy="272" r="132" fill="none" stroke="#ffffff" stroke-width="26" />
+  <path
+    d="M212 232h88"
+    stroke="#ffffff"
+    stroke-width="26"
+    stroke-linecap="round"
+  />
+  <path
+    d="M256 272v72"
+    stroke="#ffffff"
+    stroke-width="26"
+    stroke-linecap="round"
+  />
+  <path
+    d="M212 296h88"
+    stroke="#ffffff"
+    stroke-width="26"
+    stroke-linecap="round"
+  />
+  <path
+    d="M256 272 208 196M256 272l48-76"
+    stroke="#ffffff"
+    stroke-width="26"
+    stroke-linecap="round"
+  />
+</svg>

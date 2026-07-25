@@ -1,5 +1,5 @@
 import { EXPENSE_CATEGORIES, getCategory } from './categories'
-import { isSameMonth } from './date'
+import { addMonths, isSameMonth } from './date'
 import type { CategoryTotal, MonthSummary, Transaction, WishItem } from '../types'
 
 /** すべての記録から今の残高（= 収入合計 - 支出合計）を出す */
@@ -74,6 +74,44 @@ export function monthSummary(
     net: income - expense,
     byCategory: expenseByCategory(rows),
   }
+}
+
+/** 推移グラフ 1 本ぶん（1 か月） */
+export interface MonthTotal {
+  /** YYYY-MM */
+  month: string
+  income: number
+  expense: number
+  net: number
+}
+
+/**
+ * endMonth で終わる連続した count か月ぶんの収支。
+ * 記録がない月も 0 として必ず含める（グラフの横軸を飛ばさないため）。
+ */
+export function monthlyTotals(
+  transactions: Transaction[],
+  endMonth: string,
+  count = 6,
+): MonthTotal[] {
+  const buckets = new Map<string, { income: number; expense: number }>()
+  for (let i = count - 1; i >= 0; i -= 1) {
+    buckets.set(addMonths(endMonth, -i), { income: 0, expense: 0 })
+  }
+
+  for (const t of transactions) {
+    const bucket = buckets.get(t.date.slice(0, 7))
+    if (!bucket) continue
+    if (t.kind === 'income') bucket.income += t.amount
+    else bucket.expense += t.amount
+  }
+
+  return [...buckets].map(([month, { income, expense }]) => ({
+    month,
+    income,
+    expense,
+    net: income - expense,
+  }))
 }
 
 /** 記録がある月を新しい順に返す（月セレクタ用）。今月は必ず含める */
