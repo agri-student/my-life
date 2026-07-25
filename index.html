@@ -16,21 +16,119 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>おこづかい帳</title>
     <script>
-      // Stamp the resolved theme before first paint so there is no flash of the wrong mode.
+      // 最初の描画より前にテーマを確定させ、違う配色が一瞬見えるのを防ぐ。
       try {
-        const saved = localStorage.getItem('okozukai:theme')
-        const dark =
-          saved === '"dark"' ||
-          ((!saved || saved === '"system"') &&
+        var savedTheme = localStorage.getItem('okozukai:theme')
+        var prefersDark =
+          savedTheme === '"dark"' ||
+          ((!savedTheme || savedTheme === '"system"') &&
             window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      } catch {
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light')
+      } catch (error) {
         /* localStorage が使えない環境ではライトモードのまま */
       }
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      #root の中に仮の表示を置いておく。React が起動すればこの中身は置き換わる。
+      起動できなかったときは真っ白ではなく下のスクリプトが理由を表示する。
+    -->
+    <div id="root">
+      <div
+        id="boot"
+        style="
+          font-family: system-ui, -apple-system, 'Hiragino Sans', sans-serif;
+          max-width: 32rem;
+          margin: 0 auto;
+          padding: 24px;
+          color: #52514e;
+        "
+      >
+        <p style="margin: 0; font-size: 14px">よみこみ中…</p>
+        <noscript>
+          <p style="margin: 8px 0 0; font-size: 14px">
+            このアプリは JavaScript が必要です。ブラウザの設定で JavaScript を有効にしてください。
+          </p>
+        </noscript>
+      </div>
+    </div>
+
+    <script>
+      /*
+       * 起動に失敗したときの案内。
+       * #boot がまだ残っている = React が起動できていないときだけ表示する
+       * （起動後のエラーはここでは扱わない）。
+       * 古いブラウザでも必ず動くように ES5 の書き方にしている。
+       */
+      ;(function () {
+        var reported = false
+
+        function report(summary, detail) {
+          var boot = document.getElementById('boot')
+          if (!boot || reported) return
+          reported = true
+
+          boot.textContent = ''
+          boot.appendChild(
+            line('アプリを起動できませんでした', 'margin:0 0 8px;font-size:15px;font-weight:700;color:#0b0b0b'),
+          )
+          boot.appendChild(line(summary, 'margin:0 0 12px;font-size:13px;line-height:1.7'))
+
+          var pre = document.createElement('pre')
+          pre.style.cssText =
+            'margin:0;padding:10px;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;background:#f4f3ef;border-radius:8px;color:#0b0b0b'
+          pre.textContent = detail
+          boot.appendChild(pre)
+        }
+
+        function line(text, css) {
+          var p = document.createElement('p')
+          p.style.cssText = css
+          p.textContent = text
+          return p
+        }
+
+        // ファイルの読み込み失敗（バブリングしないので capture で拾う）
+        window.addEventListener(
+          'error',
+          function (event) {
+            var target = event.target
+            var tag = target && target.tagName
+            if (tag === 'SCRIPT' || tag === 'LINK' || tag === 'IMG') {
+              report(
+                'ひつような ファイルを読み込めませんでした。時間をおいて再読み込みしてみてください。',
+                String(target.src || target.href || ''),
+              )
+              return
+            }
+            report(
+              'エラーが発生しました。ブラウザが古い可能性があります。',
+              String(event.message || 'unknown error') +
+                (event.filename ? '\n' + event.filename + ':' + event.lineno : ''),
+            )
+          },
+          true,
+        )
+
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason
+          report(
+            'エラーが発生しました。',
+            String((reason && (reason.stack || reason.message)) || reason || 'unknown error'),
+          )
+        })
+
+        // 何のエラーも出ないまま描画されない場合（読み込みが途中で止まった等）
+        window.setTimeout(function () {
+          report(
+            'よみこみが終わりませんでした。通信状況を確かめて再読み込みしてみてください。',
+            'timeout: 10s',
+          )
+        }, 10000)
+      })()
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

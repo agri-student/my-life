@@ -12,5 +12,12 @@ export default defineConfig({
    * どの階層に置いても動く。
    */
   base: './',
+  build: {
+    /*
+     * 少し古いスマホでも構文エラーで真っ白にならないように、
+     * 既定より広めのブラウザに合わせて出力する（iOS 14 の Safari 相当）。
+     */
+    target: ['es2020', 'safari14'],
+  },
   plugins: [react(), tailwindcss()],
 })
