@@ -138,6 +138,24 @@ npm run build && npm run preview
 キャッシュの中身を作り直したいときは `public/sw.js` の `VERSION` を上げてください
 （古いキャッシュは activate 時に削除されます）。
 
+## GitHub Pages で公開する
+
+`.github/workflows/deploy.yml` が `npm run build` の結果（`dist/`）を公開します。
+
+**リポジトリ側で 1 回だけ設定が必要です**:
+
+> Settings → Pages → Build and deployment → **Source を「GitHub Actions」に変更**
+
+既定の「Deploy from a branch」のままだと、**ビルドせずにリポジトリのソースがそのまま配信され、
+画面が真っ白になります**（配信される `index.html` が開発用のもので、ブラウザが実行できない
+`src/main.tsx` を読み込もうとするため）。設定を変えたあと、Actions タブから
+「Deploy to GitHub Pages」を手動実行するか、何かを push すれば公開されます。
+
+なお `vite.config.ts` の `base: './'` は、この Pages 配信のために必要です。
+GitHub Pages は `https://<ユーザー名>.github.io/<リポジトリ名>/` というサブディレクトリで
+配信されるので、既定の `base: '/'` だと `/assets/...` を探しに行って 404 になります。
+相対パスにしてあるので、リポジトリ名を変えても、別のホスティングのどの階層に置いても動きます。
+
 ## これから機能を足すとき
 
 ### 保存先を Supabase などに替える
