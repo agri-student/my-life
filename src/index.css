@@ -1,0 +1,145 @@
+@import 'tailwindcss';
+
+/*
+ * ダークモードは data-theme 属性で切り替える（OS 設定は起動時に解決して属性へ書き込む）。
+ * これで `dark:` ユーティリティと CSS 変数の切り替えが 1 か所に集まる。
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ----------------------------------------------------------------------------
+ * デザイントークン（ライト）
+ * カテゴリ色 series-1..7 は検証済みの配色順。並び順自体が色覚多様性への
+ * 安全策なので、スロットの順番は入れ替えない。
+ * -------------------------------------------------------------------------- */
+:root {
+  --plane: #f9f9f7;
+  --surface-1: #ffffff;
+  --surface-2: #f4f3ef;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-muted: #898781;
+  --grid: #e1e0d9;
+  --line: #c3c2b7;
+  --border: rgb(11 11 11 / 0.1);
+  --brand: #2a78d6;
+  --brand-ink: #ffffff;
+  --success-text: #006300;
+
+  /* ステータス色（テーマ非依存・系列色には絶対に使わない） */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+
+  /* カテゴリ（系列）色：スロット順は固定。金額で並び替えても色は入れ替えない */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-other: #898781;
+}
+
+:root[data-theme='dark'] {
+  --plane: #0d0d0d;
+  --surface-1: #1a1a19;
+  --surface-2: #232322;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --ink-muted: #898781;
+  --grid: #2c2c2a;
+  --line: #383835;
+  --border: rgb(255 255 255 / 0.1);
+  --brand: #3987e5;
+  --brand-ink: #06121f;
+  --success-text: #0ca30c;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-other: #898781;
+}
+
+/* トークンを Tailwind のユーティリティに公開する（bg-surface-1 / text-ink-2 など）。
+ * `inline` を付けると値が var() 参照のまま残るので、実行時のテーマ切替が効く。 */
+@theme inline {
+  --color-plane: var(--plane);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-muted: var(--ink-muted);
+  --color-grid: var(--grid);
+  --color-line: var(--line);
+  --color-hairline: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-success-text: var(--success-text);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--plane);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    overscroll-behavior-y: none;
+  }
+
+  /* 金額入力でスピナーを出さない */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* 縦に揃える数字（表の行・軸ラベル）だけに使う。大きなヒーロー数値には使わない */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
