@@ -4,12 +4,15 @@ import { todayKey } from '../../lib/date'
 import { useMoney } from '../../store/useMoney'
 import { AmountInput, Field, QuickAmounts, TextArea, TextInput } from '../ui/Field'
 import { Button } from '../ui/Button'
+import { CameraIcon } from '../ui/icons'
 import type { TransactionKind } from '../../types'
 
 interface TransactionFormProps {
   /** 開いたときに選ばれているタブ */
   initialKind?: TransactionKind
   onDone(): void
+  /** レシートの取り込み画面へ切り替える */
+  onOpenReceipt?(): void
 }
 
 const QUICK_EXPENSE = [100, 500, 1000]
@@ -19,7 +22,11 @@ const QUICK_INCOME = [500, 1000, 5000]
  * 収入・支出の入力フォーム。
  * 「金額 → カテゴリ → 決定」の 3 ステップで終われるように、日付とメモは下に置いて任意にしている。
  */
-export function TransactionForm({ initialKind = 'expense', onDone }: TransactionFormProps) {
+export function TransactionForm({
+  initialKind = 'expense',
+  onDone,
+  onOpenReceipt,
+}: TransactionFormProps) {
   const { addTransaction } = useMoney()
   const [kind, setKind] = useState<TransactionKind>(initialKind)
   const [amount, setAmount] = useState<number | ''>('')
@@ -69,6 +76,17 @@ export function TransactionForm({ initialKind = 'expense', onDone }: Transaction
           </button>
         ))}
       </div>
+
+      {kind === 'expense' && onOpenReceipt && (
+        <button
+          type="button"
+          onClick={onOpenReceipt}
+          className="flex min-h-12 w-full items-center gap-2 rounded-xl border border-dashed border-line px-3 text-sm font-bold text-ink-2"
+        >
+          <CameraIcon size={18} />
+          レシートから読みこむ
+        </button>
+      )}
 
       <Field label="いくら？">
         {(id) => (

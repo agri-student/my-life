@@ -65,6 +65,17 @@ export function MoneyProvider({ children }: { children: ReactNode }) {
         return transaction
       },
 
+      addTransactions(inputs) {
+        if (inputs.length === 0) return
+        const createdAt = new Date().toISOString()
+        const rows: Transaction[] = inputs.map((input) => ({
+          ...input,
+          id: createId(),
+          createdAt,
+        }))
+        setData((prev) => ({ ...prev, transactions: [...rows, ...prev.transactions] }))
+      },
+
       updateTransaction(id, patch) {
         setData((prev) => ({
           ...prev,

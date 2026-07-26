@@ -41,6 +41,9 @@ jobs:
 
       - run: npm ci
 
+      - name: テスト
+        run: npm test
+
       - name: 型チェックとビルド
         run: npm run build
 

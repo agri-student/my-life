@@ -46,6 +46,10 @@ interface AmountInputProps {
   onChange(value: number | ''): void
   autoFocus?: boolean
   placeholder?: string
+  /** リストの中など、せまい場所に置くとき */
+  size?: 'md' | 'sm'
+  /** 値引きを入れられるようにする（レシートの取り込みで使う） */
+  allowNegative?: boolean
 }
 
 /**
@@ -58,27 +62,37 @@ export function AmountInput({
   onChange,
   autoFocus,
   placeholder = '0',
+  size = 'md',
+  allowNegative = false,
 }: AmountInputProps) {
+  const small = size === 'sm'
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-hairline bg-surface-2 px-3 focus-within:border-brand">
+    <div
+      className={`flex items-center gap-1.5 rounded-xl border border-hairline bg-surface-2 focus-within:border-brand ${
+        small ? 'px-2' : 'px-3'
+      }`}
+    >
       <input
         id={id}
         type="number"
-        inputMode="numeric"
-        min={0}
+        inputMode={allowNegative ? 'text' : 'numeric'}
+        min={allowNegative ? undefined : 0}
         step={1}
         autoFocus={autoFocus}
         value={value}
         placeholder={placeholder}
         onChange={(event) => {
           const raw = event.target.value
-          if (raw === '') return onChange('')
-          const parsed = Math.floor(Number(raw))
-          onChange(Number.isFinite(parsed) && parsed >= 0 ? parsed : '')
+          if (raw === '' || raw === '-') return onChange('')
+          const parsed = Math.trunc(Number(raw))
+          if (!Number.isFinite(parsed)) return onChange('')
+          onChange(allowNegative || parsed >= 0 ? parsed : '')
         }}
-        className="w-full bg-transparent py-3 text-right text-2xl font-bold text-ink outline-none placeholder:text-ink-muted"
+        className={`w-full bg-transparent text-right font-bold text-ink outline-none placeholder:text-ink-muted ${
+          small ? 'py-2 text-base' : 'py-3 text-2xl'
+        }`}
       />
-      <span className="text-sm font-bold text-ink-2">円</span>
+      <span className={`font-bold text-ink-2 ${small ? 'text-xs' : 'text-sm'}`}>円</span>
     </div>
   )
 }

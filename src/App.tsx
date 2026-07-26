@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AppShell } from './components/layout/AppShell'
 import { BottomNav } from './components/layout/BottomNav'
 import { ItemForm } from './components/items/ItemForm'
+import { ReceiptImportSheet } from './components/receipt/ReceiptImportSheet'
 import { TransactionForm } from './components/transactions/TransactionForm'
 import { BottomSheet } from './components/ui/BottomSheet'
 import { PlusIcon } from './components/ui/icons'
@@ -22,7 +23,11 @@ const TITLES: Record<Route, string> = {
 }
 
 /** 開いている入力シート */
-type Sheet = { type: 'transaction' } | { type: 'item'; item?: WishItem } | null
+type Sheet =
+  | { type: 'transaction' }
+  | { type: 'receipt' }
+  | { type: 'item'; item?: WishItem }
+  | null
 
 export default function App() {
   const { ready, error, dismissError } = useMoney()
@@ -40,6 +45,7 @@ export default function App() {
   }
 
   const openTransaction = () => setSheet({ type: 'transaction' })
+  const openReceipt = () => setSheet({ type: 'receipt' })
   const openItem = (item?: WishItem) => setSheet({ type: 'item', item })
   const closeSheet = () => setSheet(null)
 
@@ -91,7 +97,17 @@ export default function App() {
         title="お金を記録する"
         onClose={closeSheet}
       >
-        {sheet?.type === 'transaction' && <TransactionForm onDone={closeSheet} />}
+        {sheet?.type === 'transaction' && (
+          <TransactionForm onDone={closeSheet} onOpenReceipt={openReceipt} />
+        )}
+      </BottomSheet>
+
+      <BottomSheet
+        open={sheet?.type === 'receipt'}
+        title="レシートから読みこむ"
+        onClose={closeSheet}
+      >
+        {sheet?.type === 'receipt' && <ReceiptImportSheet onDone={closeSheet} />}
       </BottomSheet>
 
       <BottomSheet

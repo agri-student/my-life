@@ -17,6 +17,8 @@ export interface MoneyStore {
   dismissError(): void
 
   addTransaction(input: NewTransaction): Transaction
+  /** レシートの取り込みなど、複数件を 1 回の更新でまとめて足す */
+  addTransactions(inputs: NewTransaction[]): void
   updateTransaction(id: string, patch: Partial<Omit<Transaction, 'id'>>): void
   removeTransaction(id: string): void
 
