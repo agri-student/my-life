@@ -1,4 +1,4 @@
-import { getCategory } from '../../lib/categories'
+import { useCategories } from '../../hooks/useCategories'
 import { formatDateLabel } from '../../lib/date'
 import { signedYen } from '../../lib/format'
 import { ChevronRightIcon } from '../ui/icons'
@@ -65,7 +65,7 @@ function Row({
   /** 日付ごとの見出しがあるときは行に日付を出さない（同じ情報が 2 回出るため） */
   showDate?: boolean
 }) {
-  const category = getCategory(transaction.categoryId)
+  const category = useCategories().get(transaction.categoryId)
   const isIncome = transaction.kind === 'income'
   const title = transaction.memo?.trim() || category.label
 

@@ -19,7 +19,8 @@ const PLOT_HEIGHT = 104
  * 形：月ごとの合計という区切られた値なので、線ではなく並べた棒（グループ縦棒）。
  * 色：2 系列を見分けるための系列色（もらった = 青 / 使った = オレンジ）。
  *     収支の green / red は「良い・悪い」を表すステータス色なので、系列には使わない。
- * 値：選んだ月の金額を上の 1 行に必ず出し、全部の数字は「数字で見る」の表から読める。
+ * 値：選んだ月の金額は下の 1 行に必ず出す。棒そのものも読み上げ用のラベルを持っていて
+ *     （「2026年6月：もらった 5,000円、使った 3,000円」）、色や形だけに情報を寄せていない。
  */
 export function MonthlyTrendChart({
   rows,
@@ -112,45 +113,6 @@ export function MonthlyTrendChart({
         </div>
       )}
 
-      <details className="mt-2">
-        <summary className="cursor-pointer text-xs font-bold text-ink-2">数字で見る</summary>
-        <table className="mt-2 w-full text-xs">
-          <thead>
-            <tr className="text-ink-muted">
-              <th scope="col" className="py-1 text-left font-medium">
-                月
-              </th>
-              <th scope="col" className="py-1 text-right font-medium">
-                もらった
-              </th>
-              <th scope="col" className="py-1 text-right font-medium">
-                使った
-              </th>
-              <th scope="col" className="py-1 text-right font-medium">
-                のこり
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...rows].reverse().map((row) => (
-              <tr key={row.month} className="border-t border-hairline">
-                <th scope="row" className="py-1 text-left font-medium text-ink">
-                  {formatMonth(row.month)}
-                </th>
-                <td className="tabular py-1 text-right text-ink">{yen(row.income)}</td>
-                <td className="tabular py-1 text-right text-ink">{yen(row.expense)}</td>
-                <td
-                  className={`tabular py-1 text-right ${
-                    row.net < 0 ? 'text-critical' : 'text-ink'
-                  }`}
-                >
-                  {signedYen(row.net)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </details>
     </figure>
   )
 }

@@ -1,6 +1,6 @@
 import { EXPENSE_CATEGORIES, getCategory } from './categories'
 import { addMonths, isSameMonth } from './date'
-import type { CategoryTotal, MonthSummary, Transaction, WishItem } from '../types'
+import type { Category, CategoryTotal, MonthSummary, Transaction, WishItem } from '../types'
 
 /** すべての記録から今の残高（= 収入合計 - 支出合計）を出す */
 export function totalBalance(transactions: Transaction[]): number {
@@ -17,8 +17,14 @@ export function transactionsOfMonth(
   return transactions.filter((t) => isSameMonth(t.date, monthKey))
 }
 
-/** カテゴリ別の支出合計。カテゴリ定義の順番（= 色スロット順）で返す */
-export function expenseByCategory(transactions: Transaction[]): CategoryTotal[] {
+/**
+ * カテゴリ別の支出合計。カテゴリ定義の順番（= 色スロット順）で返す。
+ * 名前を変えたカテゴリを反映したいときは categories に上書き済みの一覧を渡す。
+ */
+export function expenseByCategory(
+  transactions: Transaction[],
+  categories: Category[] = EXPENSE_CATEGORIES,
+): CategoryTotal[] {
   const totals = new Map<string, { total: number; count: number }>()
 
   for (const t of transactions) {
@@ -31,7 +37,7 @@ export function expenseByCategory(transactions: Transaction[]): CategoryTotal[] 
 
   // 定義順で並べる。金額順に並べ替えると隣り合う色の組み合わせが毎月変わり、
   // 積み上げバーの見分けづらさ（色覚多様性の観点）が保証できなくなる。
-  const ordered = EXPENSE_CATEGORIES.map((category) => {
+  const ordered = categories.map((category) => {
     const hit = totals.get(category.id)
     return {
       category,
@@ -43,7 +49,7 @@ export function expenseByCategory(transactions: Transaction[]): CategoryTotal[] 
 
   // 定義に無い id（旧データなど）も拾って末尾に置く
   for (const [id, value] of totals) {
-    if (EXPENSE_CATEGORIES.some((c) => c.id === id)) continue
+    if (categories.some((c) => c.id === id)) continue
     ordered.push({
       category: getCategory(id),
       total: value.total,
@@ -58,6 +64,7 @@ export function expenseByCategory(transactions: Transaction[]): CategoryTotal[] 
 export function monthSummary(
   transactions: Transaction[],
   monthKey: string,
+  categories: Category[] = EXPENSE_CATEGORIES,
 ): MonthSummary {
   const rows = transactionsOfMonth(transactions, monthKey)
   const income = rows
@@ -72,7 +79,7 @@ export function monthSummary(
     income,
     expense,
     net: income - expense,
-    byCategory: expenseByCategory(rows),
+    byCategory: expenseByCategory(rows, categories),
   }
 }
 
@@ -121,25 +128,32 @@ export function monthsWithData(transactions: Transaction[], currentMonth: string
   return [...set].sort().reverse()
 }
 
-/** 「あと何円」「何%たまった」をまとめて出す */
+/** 「あと何円で買えるか」をまとめて出す */
 export interface ItemProgress {
   /** 0〜1（値段未設定なら 0） */
   ratio: number
   /** あと必要な金額（円） */
   remaining: number
-  /** 貯金だけで買えるか */
+  /** いまの残高で買えるか */
   reached: boolean
 }
 
-export function itemProgress(item: WishItem): ItemProgress {
+/**
+ * ほしいものに手が届くまでの進み方。
+ *
+ * 「貯めた額」を別に持つのはやめて、実際の残高から計算している。
+ * 別々に持つと、残高 3,030 円しかないのに「7,300 円貯まっている」と
+ * 出るような、どちらが本当か分からない表示になってしまうため。
+ */
+export function itemProgress(item: WishItem, balance: number): ItemProgress {
   if (item.price <= 0) {
     return { ratio: 0, remaining: 0, reached: false }
   }
-  const ratio = Math.min(item.saved / item.price, 1)
+  const usable = Math.max(balance, 0)
   return {
-    ratio,
-    remaining: Math.max(item.price - item.saved, 0),
-    reached: item.saved >= item.price,
+    ratio: Math.min(usable / item.price, 1),
+    remaining: Math.max(item.price - usable, 0),
+    reached: usable >= item.price,
   }
 }
 

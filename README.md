@@ -34,18 +34,18 @@ npm run lint     # oxlint
 npm test         # ユニットテスト（vitest）
 ```
 
-**最初にサンプルデータを入れると動きが分かりやすいです**：
-アプリ右下の「設定」→「サンプルデータを入れる」。今月と先月の記録・ほしいものリストが入ります。
+開発中は「設定」→「サンプルデータを入れる（開発用）」で今月と先月の記録が入ります。
+このボタンは `npm run dev` のときだけ出ます（使い始めたあとに押すと全部消えてしまうため、本番では出しません）。
 
 ## 画面
 
 | 画面 | できること |
 |---|---|
 | ホーム | いま使えるお金（大きい数字）、今月の予算メーター、カテゴリ別の支出割合、月ごとの収支の推移、次に買いたいもの、さいきんの記録 |
-| ほしいもの | ほしいもの / 買ったものの管理。写真・リンク・メモ、貯金の進み方（あと何円で買えるか） |
+| ほしいもの | ほしいもの / 買ったものの管理。写真・リンク・メモ、**いまの残高であと何円で買えるか**。「買った」は取り消せます |
 | 記録する | 手入力、または**レシートを撮って AI に読ませた結果を貼って取り込む** |
-| きろく | 月ごとの収支一覧（日付ごとにまとめて表示）、収入 / 支出でしぼりこみ。**行をタップすると直せます** |
-| 設定 | 1 か月の予算、テーマ、バックアップの書き出し / 読み込み、サンプルデータ、全消去 |
+| きろく | 月ごとの収支一覧（日付ごとにまとめて表示）、**キーワード検索**・収入 / 支出・カテゴリでしぼりこみ。**行をタップすると直せます** |
+| 設定 | 1 か月の予算、**カテゴリの名前変更・非表示**、テーマ、バックアップの書き出し / 読み込み、全消去 |
 
 画面の下にタブバーがあり、URL のハッシュ（`#/home` `#/items` …）と連動しているので、
 スマホの「戻る」ボタンでも 1 つ前のタブに戻れます。
@@ -56,7 +56,7 @@ npm test         # ユニットテスト（vitest）
 src/
 ├── types/index.ts          … アプリ全体のデータ型（Transaction / WishItem / Settings …）
 ├── lib/                    … React に依存しない純粋なロジック（テストしやすい層）
-│   ├── categories.ts       … カテゴリ定義とカテゴリ→色の対応
+│   ├── categories.ts       … カテゴリ定義、色の対応、設定の上書き適用
 │   ├── date.ts             … YYYY-MM-DD / YYYY-MM の変換・表示
 │   ├── format.ts           … 「1,200円」「32%」などの表示整形
 │   ├── id.ts               … id 生成
@@ -64,14 +64,16 @@ src/
 │   ├── receipt.ts          … レシートの読み取り結果を解析（指示文 + 緩いパーサー）
 │   ├── receipt.test.ts     … 上のパーサーのテスト
 │   ├── registerServiceWorker.ts … PWA（本番ビルドのみ登録）
-│   ├── sampleData.ts       … 動作確認用のサンプルデータ
-│   ├── stats.ts            … 残高・月別集計・カテゴリ別集計・予算計算
+│   ├── sampleData.ts       … 開発時の動作確認用データ
+│   ├── stats.ts            … 残高・月別集計・カテゴリ別集計・予算・ほしいもの進捗
+│   ├── stats.test.ts       … 上のロジックとカテゴリ設定・マイグレーションのテスト
 │   └── storage.ts          … ★保存層（DataStore インターフェース + LocalStorage 実装）
 ├── store/
 │   ├── MoneyContext.ts     … 状態と操作の型、React Context
 │   ├── MoneyProvider.tsx   … 状態を持ち、変更を保存層へ書き戻す
 │   └── useMoney.ts         … 画面から使う読み出しフック
 ├── hooks/
+│   ├── useCategories.ts    … 設定を当てたカテゴリ一覧（画面はこれを使う）
 │   ├── useHashRoute.ts     … ハッシュだけの小さなルーター
 │   ├── useLocalStorage.ts  … 単一の値を LocalStorage に残す汎用フック
 │   └── useTheme.ts         … ライト / ダーク / 端末に合わせる
@@ -81,6 +83,7 @@ src/
 │   ├── items/              … ItemCard、ItemForm
 │   ├── layout/             … AppShell、BottomNav
 │   ├── receipt/            … ReceiptImportSheet（レシート取り込みの 3 手順 + 確認）
+│   ├── settings/           … CategorySettings（カテゴリの名前変更・非表示）
 │   ├── transactions/       … TransactionForm、TransactionList
 │   └── ui/                 … Button、Card、BottomSheet、Field、EmptyState、icons
 ├── pages/                  … DashboardPage / ItemsPage / HistoryPage / SettingsPage
@@ -94,10 +97,10 @@ src/
 ```ts
 // LocalStorage のキー "okozukai:data" に入る中身
 {
-  version: 1,
+  version: 2,
   transactions: [ { id, kind: 'income' | 'expense', amount, categoryId, date, memo?, itemId? } ],
-  items:        [ { id, name, price, saved, status: 'wish' | 'bought', categoryId, imageDataUrl? } ],
-  settings:     { monthlyBudget, theme }
+  items:        [ { id, name, price, status: 'wish' | 'bought', categoryId, imageDataUrl? } ],
+  settings:     { monthlyBudget, theme, categories? }
 }
 ```
 
@@ -110,6 +113,14 @@ src/
 - 容量オーバー（`QuotaExceededError`）は画面上部に日本語のメッセージで出ます
 - **記録の修正**は一覧の行タップから。削除は編集画面の中に置き、確認を 1 段はさみます。
   一覧にゴミ箱を並べると、行をタップしたつもりで消してしまう事故が起きるためです
+- **「貯めた額」は持ちません。** 以前はほしいものごとに `saved` を持っていましたが、
+  実際の残高と繋がっておらず「残高 3,030 円なのに 7,300 円貯まっている」と出てしまいました。
+  いまは残高から「あと何円で買えるか」を計算します（`itemProgress`）。
+  v1 のデータに残っている `saved` は読み込み時に落とします
+- **「買った」は取り消せます。** 取り消すと、そのとき一緒に作られた支出（`itemId` で紐づく）も消します。
+  片方だけ残ると、買っていないのに支出だけある状態になるためです
+- **新しく記録するときの初期日付は「表示中の月」に合わせます**（`defaultDateForMonth`）。
+  6 月を見ているのに今日の日付で入ると、入れたはずの記録が画面に出てこないためです
 
 ## グラフの決めごと
 
@@ -143,7 +154,8 @@ src/
 
 実装のポイント（`src/lib/receipt.ts`）:
 
-- **指示文（`RECEIPT_PROMPT`）はカテゴリ定義から組み立てる**ので、カテゴリを増やしても AI に渡す一覧が自動で揃います
+- **指示文（`receiptPrompt()`）は実際に使っているカテゴリから組み立てる**ので、
+  名前を変えたり隠したりしても、AI に渡す一覧と入力の選択肢がズレません
 - **AI の返事は形がぶれる**前提でパーサーを緩くしています。JSON（前置きやコードフェンス付きでも可）、
   `[{...}]` の配列だけ、`品名 158円` の行テキスト、CSV / TSV / Markdown の表、全角数字、`¥`・カンマ混在に対応
 - **小計・合計・お預り・おつり・ポイントは品目に入れない**。`合計` 行は合計として拾い、品目の和と合わなければ画面で知らせます
@@ -213,11 +225,17 @@ export const dataStore: DataStore = supabaseDataStore // ← ここだけ差し�
 
 保存する形が変わったら `CURRENT_VERSION` を上げて、`migrate()` に変換を書き足してください。
 
-### カテゴリを増やす / 名前を変える
+### カテゴリ
 
-`src/lib/categories.ts` の配列に足すだけです。支出カテゴリは `slot`（1〜7 か `'other'`）で色が決まります。
-色を増やしたい場合は `src/index.css` の `--series-N` をライト / ダーク両方に足してください
-（8 色を超える場合は、色を増やすのではなく「その他」にまとめるのが読みやすいです）。
+**名前の変更と非表示は、アプリの「設定」画面からできます**（コードを触る必要はありません）。
+設定は `settings.categories` に入り、`buildCategories()` が定義に当てて画面へ渡します。
+隠したカテゴリは入力の選択肢から消えるだけで、過去の記録とグラフには残ります。
+
+追加・削除をアプリからできるようにしていないのは、カテゴリごとに
+「見分けやすさを検証済みの色」が 1 つずつ固定で割り当ててあるためです。
+種類を増やすときは `src/lib/categories.ts` の配列と `src/index.css` の `--series-N` を
+ライト / ダーク両方に足したうえで、配色を検証し直してください
+（8 色を超えるぶんは、色を増やすより「その他」にまとめるほうが読みやすいです）。
 
 ### 表示テーマの色を変える
 

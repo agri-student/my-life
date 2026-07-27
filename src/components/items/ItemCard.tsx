@@ -1,26 +1,25 @@
-import { getCategory } from '../../lib/categories'
+import { useCategories } from '../../hooks/useCategories'
 import { formatDateShort } from '../../lib/date'
 import { num, yen } from '../../lib/format'
 import { itemProgress } from '../../lib/stats'
 import { useMoney } from '../../store/useMoney'
 import { Meter } from '../charts/Meter'
 import { Button, IconButton } from '../ui/Button'
-import { CheckIcon, LinkIcon, PiggyIcon, TrashIcon } from '../ui/icons'
+import { CheckIcon, LinkIcon, TrashIcon } from '../ui/icons'
 import type { WishItem } from '../../types'
 
 interface ItemCardProps {
   item: WishItem
+  /** いま使えるお金。「あと何円で買えるか」の計算に使う */
+  balance: number
   onEdit(item: WishItem): void
 }
 
-/** 1 回の「貯金する」で足す額 */
-const SAVE_STEP = 500
-
 /** ほしいもの / 買ったもの 1 件のカード */
-export function ItemCard({ item, onEdit }: ItemCardProps) {
-  const { addSaving, markAsBought, removeItem } = useMoney()
-  const category = getCategory(item.categoryId)
-  const { ratio, remaining, reached } = itemProgress(item)
+export function ItemCard({ item, balance, onEdit }: ItemCardProps) {
+  const { markAsBought, unmarkAsBought, removeItem } = useMoney()
+  const category = useCategories().get(item.categoryId)
+  const { ratio, remaining, reached } = itemProgress(item, balance)
   const bought = item.status === 'bought'
 
   return (
@@ -52,7 +51,7 @@ export function ItemCard({ item, onEdit }: ItemCardProps) {
             </p>
           </div>
           <IconButton
-            label={`${item.name} を消す`}
+            label={`${item.name} をリストから消す`}
             className="-mt-1 -mr-1 size-9"
             onClick={() => removeItem(item.id)}
           >
@@ -61,10 +60,20 @@ export function ItemCard({ item, onEdit }: ItemCardProps) {
         </div>
 
         {bought ? (
-          <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-bold text-success-text">
-            <CheckIcon size={14} />
-            買った{item.boughtAt && <>（{formatDateShort(item.boughtAt)}）</>}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-bold text-success-text">
+              <CheckIcon size={14} />
+              買った{item.boughtAt && <>（{formatDateShort(item.boughtAt)}）</>}
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => unmarkAsBought(item.id)}
+              aria-label={`${item.name} の「買った」を取り消す`}
+            >
+              取り消す
+            </Button>
+          </div>
         ) : (
           <div className="mt-2 space-y-1.5">
             {item.price > 0 && (
@@ -73,14 +82,18 @@ export function ItemCard({ item, onEdit }: ItemCardProps) {
                   ratio={ratio}
                   size="sm"
                   tone={reached ? 'good' : 'brand'}
-                  label={`${item.name} の貯金の進み方`}
+                  label={`${item.name} まであとどれくらいか`}
                 />
                 <p className="tabular text-xs text-ink-2">
-                  <span className="font-bold text-ink">{num(item.saved)}</span> / {num(item.price)}円
                   {reached ? (
-                    <span className="ml-1.5 font-bold text-success-text">買える！</span>
+                    <span className="font-bold text-success-text">いまの残高で買える！</span>
                   ) : (
-                    <span className="ml-1.5">あと {yen(remaining)}</span>
+                    <>
+                      あと <span className="font-bold text-ink">{num(remaining)}</span>円
+                      <span className="ml-1 text-ink-muted">
+                        （残高 {num(Math.max(balance, 0))}円 / {num(item.price)}円）
+                      </span>
+                    </>
                   )}
                 </p>
               </>
@@ -89,14 +102,6 @@ export function ItemCard({ item, onEdit }: ItemCardProps) {
             {item.memo && <p className="text-xs text-ink-2">{item.memo}</p>}
 
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => addSaving(item.id, SAVE_STEP)}
-                aria-label={`${item.name} に ${SAVE_STEP} 円ためる`}
-              >
-                <PiggyIcon size={16} />+{num(SAVE_STEP)}
-              </Button>
               <Button size="sm" onClick={() => markAsBought(item.id)}>
                 <CheckIcon size={16} />
                 買った

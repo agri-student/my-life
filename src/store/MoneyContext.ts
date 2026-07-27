@@ -25,10 +25,10 @@ export interface MoneyStore {
   addItem(input: NewItem): WishItem
   updateItem(id: string, patch: Partial<Omit<WishItem, 'id' | 'createdAt'>>): void
   removeItem(id: string): void
-  /** 貯金を足す（マイナスを渡せば取り消し） */
-  addSaving(id: string, amount: number): void
   /** ほしいもの → 買った。同時に支出も記録する */
-  markAsBought(id: string): void
+  markAsBought(id: string, date?: string): void
+  /** 「買った」を取り消す。ひもづく支出の記録も一緒に消す */
+  unmarkAsBought(id: string): void
 
   updateSettings(patch: Partial<Settings>): void
   replaceAll(next: AppData): void
@@ -36,7 +36,7 @@ export interface MoneyStore {
 }
 
 export type NewTransaction = Omit<Transaction, 'id' | 'createdAt'>
-export type NewItem = Omit<WishItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'saved'> &
-  Partial<Pick<WishItem, 'status' | 'saved'>>
+export type NewItem = Omit<WishItem, 'id' | 'createdAt' | 'updatedAt' | 'status'> &
+  Partial<Pick<WishItem, 'status'>>
 
 export const MoneyContext = createContext<MoneyStore | null>(null)

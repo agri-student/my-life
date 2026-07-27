@@ -1,4 +1,4 @@
-import type { AppData } from '../types'
+import type { AppData, WishItem } from '../types'
 
 /**
  * 保存層。
@@ -15,7 +15,7 @@ export interface DataStore {
 }
 
 export const STORAGE_KEY = 'okozukai:data'
-export const CURRENT_VERSION = 1
+export const CURRENT_VERSION = 2
 
 export const DEFAULT_DATA: AppData = {
   version: CURRENT_VERSION,
@@ -55,7 +55,14 @@ export function migrate(raw: unknown): AppData {
   return {
     version: CURRENT_VERSION,
     transactions: Array.isArray(data.transactions) ? data.transactions : [],
-    items: Array.isArray(data.items) ? data.items : [],
+    // v1 の items が持っていた saved（貯めた額）は廃止した。
+    // 残高から計算するようにしたので、残っていても落とす。
+    items: Array.isArray(data.items)
+      ? data.items.map((item) => {
+          const { saved: _dropped, ...rest } = item as WishItem & { saved?: number }
+          return rest
+        })
+      : [],
     settings: {
       ...DEFAULT_DATA.settings,
       ...(data.settings ?? {}),

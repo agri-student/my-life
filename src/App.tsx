@@ -7,7 +7,7 @@ import { TransactionForm } from './components/transactions/TransactionForm'
 import { BottomSheet } from './components/ui/BottomSheet'
 import { PlusIcon } from './components/ui/icons'
 import { useHashRoute, type Route } from './hooks/useHashRoute'
-import { thisMonthKey } from './lib/date'
+import { defaultDateForMonth, thisMonthKey } from './lib/date'
 import { DashboardPage } from './pages/DashboardPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ItemsPage } from './pages/ItemsPage'
@@ -108,6 +108,7 @@ export default function App() {
           <TransactionForm
             key={sheet.transaction?.id ?? 'new'}
             transaction={sheet.transaction}
+            defaultDate={defaultDateForMonth(month)}
             onDone={closeSheet}
             onOpenReceipt={openReceipt}
           />
@@ -119,7 +120,9 @@ export default function App() {
         title="レシートから読みこむ"
         onClose={closeSheet}
       >
-        {sheet?.type === 'receipt' && <ReceiptImportSheet onDone={closeSheet} />}
+        {sheet?.type === 'receipt' && (
+          <ReceiptImportSheet defaultDate={defaultDateForMonth(month)} onDone={closeSheet} />
+        )}
       </BottomSheet>
 
       <BottomSheet

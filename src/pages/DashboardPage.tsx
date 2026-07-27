@@ -19,6 +19,7 @@ import {
   totalBalance,
   transactionsOfMonth,
 } from '../lib/stats'
+import { useCategories } from '../hooks/useCategories'
 import { useMoney } from '../store/useMoney'
 import type { Route } from '../hooks/useHashRoute'
 import type { Transaction, WishItem } from '../types'
@@ -43,7 +44,11 @@ export function DashboardPage({
   const { data } = useMoney()
   const { transactions, items, settings } = data
 
-  const summary = useMemo(() => monthSummary(transactions, month), [transactions, month])
+  const categories = useCategories()
+  const summary = useMemo(
+    () => monthSummary(transactions, month, categories.expense),
+    [transactions, month, categories],
+  )
   const balance = useMemo(() => totalBalance(transactions), [transactions])
   const recent = useMemo(
     () => transactionsOfMonth(transactions, month).slice(0, 5),
@@ -57,9 +62,9 @@ export function DashboardPage({
     () =>
       items
         .filter((item) => item.status === 'wish' && item.price > 0)
-        .sort((a, b) => itemProgress(b).ratio - itemProgress(a).ratio)
+        .sort((a, b) => itemProgress(b, balance).ratio - itemProgress(a, balance).ratio)
         .slice(0, 2),
-    [items],
+    [items, balance],
   )
 
   const daysLeft = daysLeftInMonth(month)
@@ -115,7 +120,7 @@ export function DashboardPage({
           />
           <div className="space-y-2">
             {nextTargets.map((item) => (
-              <ItemCard key={item.id} item={item} onEdit={onEditItem} />
+              <ItemCard key={item.id} item={item} balance={balance} onEdit={onEditItem} />
             ))}
           </div>
         </Card>

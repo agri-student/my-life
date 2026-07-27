@@ -1,5 +1,6 @@
 import { EXPENSE_CATEGORIES } from './categories'
 import { toDateKey } from './date'
+import type { Category } from '../types'
 
 /**
  * レシートの読み取り結果を取り込む層。
@@ -32,8 +33,12 @@ export interface ParsedReceipt {
   warnings: string[]
 }
 
-/** AI に渡す指示文。カテゴリ一覧は categories.ts から作るのでズレない */
-export const RECEIPT_PROMPT = `このレシートの写真を読み取って、下の JSON だけを返してください。説明や前置きは書かないでください。
+/**
+ * AI に渡す指示文。カテゴリ一覧は実際に使っているものから作るので、
+ * 名前を変えたり隠したりしても指示文と選択肢がズレない。
+ */
+export function receiptPrompt(categories: Category[] = EXPENSE_CATEGORIES): string {
+  return `このレシートの写真を読み取って、下の JSON だけを返してください。説明や前置きは書かないでください。
 
 {
   "date": "YYYY-MM-DD",
@@ -49,9 +54,10 @@ export const RECEIPT_PROMPT = `このレシートの写真を読み取って、�
 - 割引・値引きはマイナスの数字にする
 - 小計・合計・お預り・おつり・ポイントは items に入れない
 - category は次のどれか 1 つ:
-  ${EXPENSE_CATEGORIES.map((c) => c.label).join(' / ')}
+  ${categories.map((c) => c.label).join(' / ')}
 - 読み取れない項目は書かない
 - 日付が読み取れないときは "date" を "" にする`
+}
 
 /** 合計・支払いなど、品目ではない行 */
 const SUMMARY_LINE =

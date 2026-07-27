@@ -1,14 +1,16 @@
 import { useState, type ReactNode } from 'react'
-import { EXPENSE_CATEGORIES, getCategory } from '../../lib/categories'
+import { useCategories } from '../../hooks/useCategories'
 import { todayKey } from '../../lib/date'
 import { num, yen } from '../../lib/format'
-import { RECEIPT_PROMPT, parseReceiptText, type ParsedReceipt } from '../../lib/receipt'
+import { parseReceiptText, receiptPrompt, type ParsedReceipt } from '../../lib/receipt'
 import { useMoney } from '../../store/useMoney'
 import { Button, IconButton } from '../ui/Button'
 import { AmountInput, Field, TextArea, TextInput } from '../ui/Field'
 import { AlertIcon, CheckIcon, TrashIcon } from '../ui/icons'
 
 interface ReceiptImportSheetProps {
+  /** 日付が読み取れなかったときの初期値（表示中の月に合わせる） */
+  defaultDate?: string
   onDone(): void
 }
 
@@ -31,14 +33,16 @@ type Mode = 'single' | 'items'
  * アプリから API を呼ばないので費用は 0 円で、キーを持たせる必要もない。
  * AI の返事は形がぶれるので、貼ったあとは必ずこの確認画面を通してから記録する。
  */
-export function ReceiptImportSheet({ onDone }: ReceiptImportSheetProps) {
+export function ReceiptImportSheet({ defaultDate, onDone }: ReceiptImportSheetProps) {
   const { addTransaction, addTransactions } = useMoney()
+  const categories = useCategories()
+  const prompt = receiptPrompt(categories.expenseVisible)
   const [step, setStep] = useState<'input' | 'confirm'>('input')
   const [pasted, setPasted] = useState('')
   const [copied, setCopied] = useState(false)
   const [parsed, setParsed] = useState<ParsedReceipt | null>(null)
 
-  const [date, setDate] = useState(todayKey())
+  const [date, setDate] = useState(defaultDate ?? todayKey())
   const [shop, setShop] = useState('')
   const [mode, setMode] = useState<Mode>('single')
   const [rows, setRows] = useState<Row[]>([])
@@ -56,7 +60,7 @@ export function ReceiptImportSheet({ onDone }: ReceiptImportSheetProps) {
 
   const copyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(RECEIPT_PROMPT)
+      await navigator.clipboard.writeText(prompt)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -69,7 +73,7 @@ export function ReceiptImportSheet({ onDone }: ReceiptImportSheetProps) {
   const read = () => {
     const result = parseReceiptText(pasted)
     setParsed(result)
-    setDate(result.date ?? todayKey())
+    setDate(result.date ?? defaultDate ?? todayKey())
     setShop(result.shop ?? '')
     setRows(
       result.items.map((item, index) => ({
@@ -138,7 +142,7 @@ export function ReceiptImportSheet({ onDone }: ReceiptImportSheetProps) {
                 文章を見る（手でコピーしたいとき）
               </summary>
               <pre className="mt-2 max-h-40 overflow-auto rounded-xl bg-surface-2 p-3 text-[11px] leading-relaxed whitespace-pre-wrap text-ink">
-                {RECEIPT_PROMPT}
+                {prompt}
               </pre>
             </details>
           </Step>
@@ -277,7 +281,7 @@ export function ReceiptImportSheet({ onDone }: ReceiptImportSheetProps) {
                   disabled={mode === 'single'}
                   className="min-h-11 min-w-0 flex-1 rounded-xl border border-hairline bg-surface-2 px-2 text-sm text-ink disabled:opacity-50"
                 >
-                  {EXPENSE_CATEGORIES.map((category) => (
+                  {categories.expenseVisible.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.emoji} {category.label}
                     </option>
@@ -316,8 +320,8 @@ export function ReceiptImportSheet({ onDone }: ReceiptImportSheetProps) {
             カテゴリは
             <span className="font-bold text-ink">
               {' '}
-              {getCategory(mainCategoryId(itemRows)).emoji}{' '}
-              {getCategory(mainCategoryId(itemRows)).label}{' '}
+              {categories.get(mainCategoryId(itemRows)).emoji}{' '}
+              {categories.get(mainCategoryId(itemRows)).label}{' '}
             </span>
             （金額がいちばん大きい品目のカテゴリ）で記録します。
           </p>

@@ -3,6 +3,7 @@ import { Button } from '../components/ui/Button'
 import { Card, CardHeader } from '../components/ui/Card'
 import { AmountInput, Field } from '../components/ui/Field'
 import { DeviceIcon, MoonIcon, SunIcon } from '../components/ui/icons'
+import { CategorySettings } from '../components/settings/CategorySettings'
 import { useTheme } from '../hooks/useTheme'
 import { createSampleData } from '../lib/sampleData'
 import { exportJson, importJson } from '../lib/storage'
@@ -53,6 +54,14 @@ export function SettingsPage() {
             保存する
           </Button>
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="カテゴリ"
+          hint="名前を変えたり、使わないものを隠したりできます"
+        />
+        <CategorySettings />
       </Card>
 
       <Card>
@@ -107,18 +116,6 @@ export function SettingsPage() {
           />
 
           <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() => {
-              if (!confirm('今のデータをサンプルに置きかえます。よろしいですか？')) return
-              replaceAll(createSampleData())
-              setMessage('サンプルデータを入れました')
-            }}
-          >
-            サンプルデータを入れる
-          </Button>
-
-          <Button
             variant="danger"
             className="w-full"
             onClick={() => {
@@ -129,6 +126,23 @@ export function SettingsPage() {
           >
             記録をぜんぶ消す
           </Button>
+
+          {/*
+            サンプルデータは開発中の動作確認用。
+            本番では出さない（実際に使い始めたあとに押すと全部消えてしまうため）。
+          */}
+          {import.meta.env.DEV && (
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => {
+                replaceAll(createSampleData())
+                setMessage('サンプルデータを入れました（開発用）')
+              }}
+            >
+              サンプルデータを入れる（開発用）
+            </Button>
+          )}
         </div>
 
         {message && (

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { EXPENSE_CATEGORIES } from '../../lib/categories'
+import { useCategories } from '../../hooks/useCategories'
 import { fileToResizedDataUrl } from '../../lib/image'
 import { useMoney } from '../../store/useMoney'
 import { AmountInput, Field, TextArea, TextInput } from '../ui/Field'
@@ -16,9 +16,9 @@ interface ItemFormProps {
 /** ほしいもの / 買ったものの登録・編集フォーム */
 export function ItemForm({ item, onDone }: ItemFormProps) {
   const { addItem, updateItem } = useMoney()
+  const categories = useCategories()
   const [name, setName] = useState(item?.name ?? '')
   const [price, setPrice] = useState<number | ''>(item?.price ?? '')
-  const [saved, setSaved] = useState<number | ''>(item?.saved ?? '')
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? 'other')
   const [url, setUrl] = useState(item?.url ?? '')
   const [memo, setMemo] = useState(item?.memo ?? '')
@@ -26,6 +26,11 @@ export function ItemForm({ item, onDone }: ItemFormProps) {
   const [imageError, setImageError] = useState<string | null>(null)
 
   const canSubmit = name.trim().length > 0
+
+  // 隠したカテゴリは選択肢に出さない。ただし編集中のものは残す
+  const visibleCategories = categories.expenseVisible.some((c) => c.id === categoryId)
+    ? categories.expenseVisible
+    : [...categories.expenseVisible, categories.get(categoryId)]
 
   const pickImage = async (file: File | undefined) => {
     if (!file) return
@@ -42,7 +47,6 @@ export function ItemForm({ item, onDone }: ItemFormProps) {
     const payload = {
       name: name.trim(),
       price: price === '' ? 0 : price,
-      saved: saved === '' ? 0 : saved,
       categoryId,
       url: url.trim() || undefined,
       memo: memo.trim() || undefined,
@@ -74,14 +78,9 @@ export function ItemForm({ item, onDone }: ItemFormProps) {
         )}
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="値段">
-          {(id) => <AmountInput id={id} value={price} onChange={setPrice} />}
-        </Field>
-        <Field label="いま貯まってる金額">
-          {(id) => <AmountInput id={id} value={saved} onChange={setSaved} />}
-        </Field>
-      </div>
+      <Field label="値段" hint="入れておくと「あと何円で買えるか」が出ます">
+        {(id) => <AmountInput id={id} value={price} onChange={setPrice} />}
+      </Field>
 
       <Field label="カテゴリ（買ったときに支出として記録される）">
         {(id) => (
@@ -91,7 +90,7 @@ export function ItemForm({ item, onDone }: ItemFormProps) {
             onChange={(event) => setCategoryId(event.target.value)}
             className="min-h-12 w-full rounded-xl border border-hairline bg-surface-2 px-3 text-base text-ink"
           >
-            {EXPENSE_CATEGORIES.map((category) => (
+            {visibleCategories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.emoji} {category.label}
               </option>

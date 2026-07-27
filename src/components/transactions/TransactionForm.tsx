@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { categoriesOf } from '../../lib/categories'
+import { useCategories } from '../../hooks/useCategories'
 import { todayKey } from '../../lib/date'
 import { useMoney } from '../../store/useMoney'
 import { AmountInput, Field, QuickAmounts, TextArea, TextInput } from '../ui/Field'
@@ -12,6 +12,8 @@ interface TransactionFormProps {
   initialKind?: TransactionKind
   /** 渡すと編集モードになる */
   transaction?: Transaction
+  /** 新規のときの初期日付（表示中の月に合わせる） */
+  defaultDate?: string
   onDone(): void
   /** レシートの取り込み画面へ切り替える（新規のときだけ出す） */
   onOpenReceipt?(): void
@@ -27,18 +29,23 @@ const QUICK_INCOME = [500, 1000, 5000]
 export function TransactionForm({
   initialKind = 'expense',
   transaction,
+  defaultDate,
   onDone,
   onOpenReceipt,
 }: TransactionFormProps) {
   const { addTransaction, updateTransaction, removeTransaction } = useMoney()
+  const allCategories = useCategories()
   const editing = transaction !== undefined
+
+  const pickerFor = (target: TransactionKind) =>
+    target === 'income' ? allCategories.incomeVisible : allCategories.expenseVisible
 
   const [kind, setKind] = useState<TransactionKind>(transaction?.kind ?? initialKind)
   const [amount, setAmount] = useState<number | ''>(transaction?.amount ?? '')
   const [categoryId, setCategoryId] = useState(
-    transaction?.categoryId ?? categoriesOf(initialKind)[0].id,
+    transaction?.categoryId ?? pickerFor(initialKind)[0]?.id ?? 'other',
   )
-  const [date, setDate] = useState(transaction?.date ?? todayKey())
+  const [date, setDate] = useState(transaction?.date ?? defaultDate ?? todayKey())
   const [memo, setMemo] = useState(transaction?.memo ?? '')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const confirmRef = useRef<HTMLDivElement>(null)
@@ -56,10 +63,18 @@ export function TransactionForm({
   const changeKind = (next: TransactionKind) => {
     if (next === kind) return
     setKind(next)
-    setCategoryId(categoriesOf(next)[0].id)
+    setCategoryId(pickerFor(next)[0]?.id ?? 'other')
   }
 
-  const categories = categoriesOf(kind)
+  /*
+   * 選択肢は「隠していないカテゴリ」だけ。
+   * ただし編集で開いた記録が隠したカテゴリなら、その 1 つは出す
+   * （出さないと、選ばれているものが画面に無い状態になってしまう）。
+   */
+  const visible = pickerFor(kind)
+  const categories = visible.some((c) => c.id === categoryId)
+    ? visible
+    : [...visible, allCategories.get(categoryId)]
   const canSubmit = amount !== '' && amount > 0
 
   const submit = () => {

@@ -52,7 +52,6 @@ const ITEM_SEEDS: Array<Omit<WishItem, 'id' | 'createdAt' | 'updatedAt'>> = [
   {
     name: 'ワイヤレスイヤホン',
     price: 8800,
-    saved: 3500,
     status: 'wish',
     categoryId: 'other',
     memo: 'ノイキャン付きがいい。誕生日までに買う',
@@ -61,7 +60,6 @@ const ITEM_SEEDS: Array<Omit<WishItem, 'id' | 'createdAt' | 'updatedAt'>> = [
   {
     name: '推しのアクスタ（新弾）',
     price: 1800,
-    saved: 1800,
     status: 'wish',
     categoryId: 'oshi',
     memo: '発売日：来週の金曜',
@@ -69,7 +67,6 @@ const ITEM_SEEDS: Array<Omit<WishItem, 'id' | 'createdAt' | 'updatedAt'>> = [
   {
     name: 'スニーカー',
     price: 12000,
-    saved: 2000,
     status: 'wish',
     categoryId: 'fashion',
     memo: '白か黒でまだ迷ってる',
@@ -77,7 +74,6 @@ const ITEM_SEEDS: Array<Omit<WishItem, 'id' | 'createdAt' | 'updatedAt'>> = [
   {
     name: 'Tシャツ',
     price: 2980,
-    saved: 2980,
     status: 'bought',
     categoryId: 'fashion',
     memo: 'セールで買えた！',

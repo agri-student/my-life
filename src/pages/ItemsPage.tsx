@@ -5,7 +5,7 @@ import { Card, CardHeader } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { PlusIcon } from '../components/ui/icons'
 import { yen } from '../lib/format'
-import { itemProgress } from '../lib/stats'
+import { itemProgress, totalBalance } from '../lib/stats'
 import { useMoney } from '../store/useMoney'
 import type { WishItem } from '../types'
 
@@ -19,13 +19,15 @@ type Tab = 'wish' | 'bought'
 export function ItemsPage({ onAddItem, onEditItem }: ItemsPageProps) {
   const { data } = useMoney()
   const [tab, setTab] = useState<Tab>('wish')
+  const balance = useMemo(() => totalBalance(data.transactions), [data.transactions])
 
+  // あと少しで買えるものを上に出す
   const wish = useMemo(
     () =>
       data.items
         .filter((item) => item.status === 'wish')
-        .sort((a, b) => itemProgress(b).ratio - itemProgress(a).ratio),
-    [data.items],
+        .sort((a, b) => itemProgress(b, balance).ratio - itemProgress(a, balance).ratio),
+    [data.items, balance],
   )
 
   const bought = useMemo(
@@ -37,8 +39,8 @@ export function ItemsPage({ onAddItem, onEditItem }: ItemsPageProps) {
   )
 
   const shown = tab === 'wish' ? wish : bought
-  const savedTotal = wish.reduce((sum, item) => sum + item.saved, 0)
-  const remainingTotal = wish.reduce((sum, item) => sum + itemProgress(item).remaining, 0)
+  const wishTotal = wish.reduce((sum, item) => sum + item.price, 0)
+  const buyableNow = wish.filter((item) => item.price > 0 && itemProgress(item, balance).reached)
 
   return (
     <div className="space-y-4">
@@ -65,20 +67,24 @@ export function ItemsPage({ onAddItem, onEditItem }: ItemsPageProps) {
 
       {tab === 'wish' && wish.length > 0 && (
         <Card>
-          <h2 className="text-xs font-bold text-ink-2">ほしいもの用に貯めた合計</h2>
-          <p className="tabular mt-0.5 text-xl font-bold text-ink">{yen(savedTotal)}</p>
-          {remainingTotal > 0 && (
-            <p className="mt-1 text-xs text-ink-muted">
-              ぜんぶ買うには あと {yen(remainingTotal)}
-            </p>
-          )}
+          <h2 className="text-xs font-bold text-ink-2">いま使えるお金</h2>
+          <p className="tabular mt-0.5 text-xl font-bold text-ink">{yen(Math.max(balance, 0))}</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            {buyableNow.length > 0 ? (
+              <span className="font-bold text-success-text">
+                {buyableNow.length}件は いま買える！
+              </span>
+            ) : (
+              <>ぜんぶで {yen(wishTotal)} ぶん</>
+            )}
+          </p>
         </Card>
       )}
 
       {shown.length > 0 ? (
         <div className="space-y-2">
           {shown.map((item) => (
-            <ItemCard key={item.id} item={item} onEdit={onEditItem} />
+            <ItemCard key={item.id} item={item} balance={balance} onEdit={onEditItem} />
           ))}
         </div>
       ) : (

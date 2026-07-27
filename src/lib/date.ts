@@ -81,6 +81,18 @@ export function daysLeftInMonth(monthKey: string): number {
   return daysInMonth(monthKey) - now.getDate() + 1
 }
 
+/**
+ * その月に記録するときの初期日付。
+ * 今月を見ているなら今日、過去の月を見ているならその月の末日。
+ * 表示中の月と違う月の日付が既定になっていると、
+ * 入れたはずの記録が画面に出てこなくて混乱するため。
+ */
+export function defaultDateForMonth(monthKey: string, today = new Date()): string {
+  if (monthKey === toMonthKey(today)) return toDateKey(today)
+  const [y, m] = monthKey.split('-').map(Number)
+  return toDateKey(new Date(y, m - 1, daysInMonth(monthKey)))
+}
+
 export function isSameMonth(dateKey: string, monthKey: string): boolean {
   return dateKey.slice(0, 7) === monthKey
 }

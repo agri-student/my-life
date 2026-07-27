@@ -94,7 +94,6 @@ export function MoneyProvider({ children }: { children: ReactNode }) {
         const now = new Date().toISOString()
         const item: WishItem = {
           status: 'wish',
-          saved: 0,
           ...input,
           id: createId(),
           createdAt: now,
@@ -110,24 +109,9 @@ export function MoneyProvider({ children }: { children: ReactNode }) {
         setData((prev) => ({ ...prev, items: prev.items.filter((item) => item.id !== id) }))
       },
 
-      addSaving(id, amount) {
-        setData((prev) => ({
-          ...prev,
-          items: prev.items.map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  saved: Math.max(0, item.saved + amount),
-                  updatedAt: new Date().toISOString(),
-                }
-              : item,
-          ),
-        }))
-      },
-
-      markAsBought(id) {
+      markAsBought(id, when) {
         const now = new Date().toISOString()
-        const date = todayKey()
+        const date = when ?? todayKey()
         setData((prev) => {
           const item = prev.items.find((i) => i.id === id)
           if (!item || item.status === 'bought') return prev
@@ -155,6 +139,26 @@ export function MoneyProvider({ children }: { children: ReactNode }) {
             transactions,
             items: prev.items.map((i) =>
               i.id === id ? { ...i, status: 'bought', boughtAt: date, updatedAt: now } : i,
+            ),
+          }
+        })
+      },
+
+      unmarkAsBought(id) {
+        const now = new Date().toISOString()
+        setData((prev) => {
+          const item = prev.items.find((i) => i.id === id)
+          if (!item || item.status !== 'bought') return prev
+
+          return {
+            ...prev,
+            // 「買った」ときに一緒に作った支出も消す。
+            // 残したままだと、買っていないのに支出だけ残ってしまう。
+            transactions: prev.transactions.filter((t) => t.itemId !== id),
+            items: prev.items.map((i) =>
+              i.id === id
+                ? { ...i, status: 'wish', boughtAt: undefined, updatedAt: now }
+                : i,
             ),
           }
         })

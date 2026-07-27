@@ -1,4 +1,4 @@
-import type { Category, SeriesSlot } from '../types'
+import type { Category, CategoryOverride, SeriesSlot } from '../types'
 
 /**
  * カテゴリ定義。
@@ -27,6 +27,43 @@ export const INCOME_CATEGORIES: Category[] = [
 export const ALL_CATEGORIES: Category[] = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES]
 
 const BY_ID = new Map(ALL_CATEGORIES.map((c) => [c.id, c]))
+
+export type CategoryOverrides = Record<string, CategoryOverride>
+
+/**
+ * 好み設定（名前の変更・非表示）を当てたカテゴリ一覧を作る。
+ *
+ * 増やす・消すではなく「名前を変える・選択肢から隠す」だけにしているのは、
+ * 色スロットがカテゴリに固定で紐づいていて、自由に増やすと
+ * 見分けやすさ（色覚多様性への配慮）の保証が崩れるため。
+ * 隠したカテゴリも、過去の記録の表示には使い続ける。
+ */
+export function buildCategories(overrides: CategoryOverrides = {}) {
+  const apply = (category: Category): Category => {
+    const override = overrides[category.id]
+    if (!override) return category
+    return { ...category, label: override.label?.trim() || category.label }
+  }
+  const isHidden = (category: Category) => overrides[category.id]?.hidden === true
+
+  const expense = EXPENSE_CATEGORIES.map(apply)
+  const income = INCOME_CATEGORIES.map(apply)
+  const byId = new Map([...expense, ...income].map((c) => [c.id, c]))
+
+  return {
+    /** 定義順のすべて（グラフの並びや設定画面はこちら） */
+    expense,
+    income,
+    /** 入力の選択肢に出すぶんだけ */
+    expenseVisible: expense.filter((c) => !isHidden(c)),
+    incomeVisible: income.filter((c) => !isHidden(c)),
+    /** 未知の id でも落ちない取得 */
+    get: (id: string): Category => byId.get(id) ?? getCategory(id),
+    isHidden: (id: string) => overrides[id]?.hidden === true,
+  }
+}
+
+export type CategorySet = ReturnType<typeof buildCategories>
 
 /** 未知の id が来ても画面を壊さないためのフォールバック付き取得 */
 export function getCategory(id: string): Category {

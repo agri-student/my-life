@@ -48,8 +48,6 @@ export interface WishItem {
   name: string
   /** 円。値段が未定なら 0 */
   price: number
-  /** 貯めた金額（円） */
-  saved: number
   status: 'wish' | 'bought'
   /** 支出カテゴリの Category.id（買ったときにこのカテゴリで記録する） */
   categoryId: string
@@ -64,10 +62,20 @@ export interface WishItem {
   boughtAt?: string
 }
 
+/** カテゴリ 1 つぶんの好み設定 */
+export interface CategoryOverride {
+  /** 表示名を変えたいとき */
+  label?: string
+  /** 入力の選択肢から隠す（過去の記録はそのまま残る） */
+  hidden?: boolean
+}
+
 export interface Settings {
   /** 1 か月に使っていい金額の目安（円）。0 なら予算なし */
   monthlyBudget: number
   theme: ThemeSetting
+  /** カテゴリの名前変更・非表示。キーは Category.id */
+  categories?: Record<string, CategoryOverride>
 }
 
 export type ThemeSetting = 'light' | 'dark' | 'system'
