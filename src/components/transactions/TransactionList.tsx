@@ -1,20 +1,23 @@
 import { getCategory } from '../../lib/categories'
 import { formatDateLabel } from '../../lib/date'
 import { signedYen } from '../../lib/format'
-import { TrashIcon } from '../ui/icons'
-import { IconButton } from '../ui/Button'
+import { ChevronRightIcon } from '../ui/icons'
 import type { Transaction } from '../../types'
 
 interface TransactionListProps {
   transactions: Transaction[]
-  /** 消せるようにするか（履歴画面だけ true） */
-  onDelete?: (id: string) => void
+  /**
+   * 行をタップしたときに開く編集画面。
+   * 消すのは編集画面の中（確認つき）に置いてある。一覧にゴミ箱を並べると、
+   * 行をタップしたつもりで消してしまう事故が起きるため。
+   */
+  onEdit?: (transaction: Transaction) => void
   /** 日付ごとの見出しを出すか */
   grouped?: boolean
 }
 
 /** 新しい順に並べた収支のリスト */
-export function TransactionList({ transactions, onDelete, grouped = false }: TransactionListProps) {
+export function TransactionList({ transactions, onEdit, grouped = false }: TransactionListProps) {
   const sorted = [...transactions].sort((a, b) =>
     a.date === b.date ? b.createdAt.localeCompare(a.createdAt) : b.date.localeCompare(a.date),
   )
@@ -23,7 +26,7 @@ export function TransactionList({ transactions, onDelete, grouped = false }: Tra
     return (
       <ul className="divide-y divide-hairline">
         {sorted.map((transaction) => (
-          <Row key={transaction.id} transaction={transaction} onDelete={onDelete} showDate />
+          <Row key={transaction.id} transaction={transaction} onEdit={onEdit} showDate />
         ))}
       </ul>
     )
@@ -43,7 +46,7 @@ export function TransactionList({ transactions, onDelete, grouped = false }: Tra
           <h3 className="mb-1 text-xs font-bold text-ink-muted">{formatDateLabel(date)}</h3>
           <ul className="divide-y divide-hairline rounded-xl border border-hairline bg-surface-1 px-3">
             {rows.map((transaction) => (
-              <Row key={transaction.id} transaction={transaction} onDelete={onDelete} />
+              <Row key={transaction.id} transaction={transaction} onEdit={onEdit} />
             ))}
           </ul>
         </div>
@@ -54,20 +57,20 @@ export function TransactionList({ transactions, onDelete, grouped = false }: Tra
 
 function Row({
   transaction,
-  onDelete,
+  onEdit,
   showDate = false,
 }: {
   transaction: Transaction
-  onDelete?: (id: string) => void
+  onEdit?: (transaction: Transaction) => void
   /** 日付ごとの見出しがあるときは行に日付を出さない（同じ情報が 2 回出るため） */
   showDate?: boolean
 }) {
   const category = getCategory(transaction.categoryId)
   const isIncome = transaction.kind === 'income'
-  const amount = isIncome ? transaction.amount : -transaction.amount
+  const title = transaction.memo?.trim() || category.label
 
-  return (
-    <li className="flex items-center gap-3 py-2.5">
+  const body = (
+    <>
       <span
         aria-hidden="true"
         className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-base"
@@ -75,33 +78,39 @@ function Row({
         {category.emoji}
       </span>
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-ink">
-          {transaction.memo?.trim() || category.label}
-        </p>
-        <p className="truncate text-xs text-ink-muted">
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block truncate text-sm font-bold text-ink">{title}</span>
+        <span className="block truncate text-xs text-ink-muted">
           {category.label}
           {showDate && <>・{formatDateLabel(transaction.date)}</>}
-        </p>
-      </div>
+        </span>
+      </span>
 
       <span
         className={`tabular shrink-0 text-sm font-bold ${
           isIncome ? 'text-success-text' : 'text-ink'
         }`}
       >
-        {signedYen(amount)}
+        {signedYen(isIncome ? transaction.amount : -transaction.amount)}
       </span>
+    </>
+  )
 
-      {onDelete && (
-        <IconButton
-          label={`${transaction.memo?.trim() || category.label} を消す`}
-          className="-mr-2 size-9"
-          onClick={() => onDelete(transaction.id)}
-        >
-          <TrashIcon size={16} />
-        </IconButton>
-      )}
+  if (!onEdit) {
+    return <li className="flex items-center gap-3 py-2.5">{body}</li>
+  }
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onEdit(transaction)}
+        aria-label={`${title} ${signedYen(isIncome ? transaction.amount : -transaction.amount)} を直す`}
+        className="flex w-full items-center gap-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+      >
+        {body}
+        <ChevronRightIcon size={16} className="-mr-1 shrink-0 text-ink-muted" />
+      </button>
     </li>
   )
 }

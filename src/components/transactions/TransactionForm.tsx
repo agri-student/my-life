@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { categoriesOf } from '../../lib/categories'
 import { todayKey } from '../../lib/date'
 import { useMoney } from '../../store/useMoney'
 import { AmountInput, Field, QuickAmounts, TextArea, TextInput } from '../ui/Field'
 import { Button } from '../ui/Button'
-import { CameraIcon } from '../ui/icons'
-import type { TransactionKind } from '../../types'
+import { CameraIcon, TrashIcon } from '../ui/icons'
+import type { Transaction, TransactionKind } from '../../types'
 
 interface TransactionFormProps {
-  /** 開いたときに選ばれているタブ */
+  /** 開いたときに選ばれているタブ（新規のときだけ効く） */
   initialKind?: TransactionKind
+  /** 渡すと編集モードになる */
+  transaction?: Transaction
   onDone(): void
-  /** レシートの取り込み画面へ切り替える */
+  /** レシートの取り込み画面へ切り替える（新規のときだけ出す） */
   onOpenReceipt?(): void
 }
 
@@ -24,27 +26,47 @@ const QUICK_INCOME = [500, 1000, 5000]
  */
 export function TransactionForm({
   initialKind = 'expense',
+  transaction,
   onDone,
   onOpenReceipt,
 }: TransactionFormProps) {
-  const { addTransaction } = useMoney()
-  const [kind, setKind] = useState<TransactionKind>(initialKind)
-  const [amount, setAmount] = useState<number | ''>('')
-  const [categoryId, setCategoryId] = useState(categoriesOf(initialKind)[0].id)
-  const [date, setDate] = useState(todayKey())
-  const [memo, setMemo] = useState('')
+  const { addTransaction, updateTransaction, removeTransaction } = useMoney()
+  const editing = transaction !== undefined
 
-  // 収入 / 支出を切り替えたら、そのタブの先頭カテゴリに戻す
+  const [kind, setKind] = useState<TransactionKind>(transaction?.kind ?? initialKind)
+  const [amount, setAmount] = useState<number | ''>(transaction?.amount ?? '')
+  const [categoryId, setCategoryId] = useState(
+    transaction?.categoryId ?? categoriesOf(initialKind)[0].id,
+  )
+  const [date, setDate] = useState(transaction?.date ?? todayKey())
+  const [memo, setMemo] = useState(transaction?.memo ?? '')
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const confirmRef = useRef<HTMLDivElement>(null)
+
+  // 確認は画面の下に出るので、押したら見える位置まで送る
   useEffect(() => {
-    setCategoryId(categoriesOf(kind)[0].id)
-  }, [kind])
+    if (confirmingDelete) confirmRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [confirmingDelete])
+
+  /*
+   * 収入 / 支出を切り替えたら、そのタブの先頭カテゴリに移す。
+   * useEffect でやるとマウント時にも動いて、編集で開いたときに
+   * もとのカテゴリを消してしまうので、切り替えた瞬間だけ動かす。
+   */
+  const changeKind = (next: TransactionKind) => {
+    if (next === kind) return
+    setKind(next)
+    setCategoryId(categoriesOf(next)[0].id)
+  }
 
   const categories = categoriesOf(kind)
   const canSubmit = amount !== '' && amount > 0
 
   const submit = () => {
     if (!canSubmit) return
-    addTransaction({ kind, amount, categoryId, date, memo: memo.trim() || undefined })
+    const payload = { kind, amount, categoryId, date, memo: memo.trim() || undefined }
+    if (transaction) updateTransaction(transaction.id, payload)
+    else addTransaction(payload)
     onDone()
   }
 
@@ -67,7 +89,7 @@ export function TransactionForm({
             type="button"
             role="tab"
             aria-selected={kind === value}
-            onClick={() => setKind(value)}
+            onClick={() => changeKind(value)}
             className={`min-h-10 rounded-lg text-sm font-bold transition-colors ${
               kind === value ? 'bg-surface-1 text-ink' : 'text-ink-2'
             }`}
@@ -77,7 +99,7 @@ export function TransactionForm({
         ))}
       </div>
 
-      {kind === 'expense' && onOpenReceipt && (
+      {!editing && kind === 'expense' && onOpenReceipt && (
         <button
           type="button"
           onClick={onOpenReceipt}
@@ -157,9 +179,53 @@ export function TransactionForm({
           やめる
         </Button>
         <Button type="submit" size="lg" className="flex-2" disabled={!canSubmit}>
-          記録する
+          {editing ? '保存する' : '記録する'}
         </Button>
       </div>
+
+      {editing && (
+        <div className="border-t border-hairline pt-3">
+          {confirmingDelete ? (
+            <div
+              ref={confirmRef}
+              className="space-y-2 rounded-xl border border-critical/40 bg-critical/10 p-3"
+            >
+              <p className="text-xs font-bold text-ink">この記録を消しますか？もとに戻せません。</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setConfirmingDelete(false)}
+                >
+                  消さない
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="flex-1"
+                  onClick={() => {
+                    removeTransaction(transaction.id)
+                    onDone()
+                  }}
+                >
+                  消す
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="danger"
+              className="w-full"
+              onClick={() => setConfirmingDelete(true)}
+            >
+              <TrashIcon size={16} />
+              この記録を消す
+            </Button>
+          )}
+        </div>
+      )}
     </form>
   )
 }

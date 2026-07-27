@@ -7,18 +7,24 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { signedYen, yen } from '../lib/format'
 import { monthSummary, transactionsOfMonth } from '../lib/stats'
 import { useMoney } from '../store/useMoney'
-import type { TransactionKind } from '../types'
+import type { Transaction, TransactionKind } from '../types'
 
 interface HistoryPageProps {
   month: string
   onMonthChange(month: string): void
   onAdd(): void
+  onEditTransaction(transaction: Transaction): void
 }
 
 type Filter = 'all' | TransactionKind
 
-export function HistoryPage({ month, onMonthChange, onAdd }: HistoryPageProps) {
-  const { data, removeTransaction } = useMoney()
+export function HistoryPage({
+  month,
+  onMonthChange,
+  onAdd,
+  onEditTransaction,
+}: HistoryPageProps) {
+  const { data } = useMoney()
   const [filter, setFilter] = useState<Filter>('all')
 
   const rows = useMemo(() => transactionsOfMonth(data.transactions, month), [data.transactions, month])
@@ -71,7 +77,7 @@ export function HistoryPage({ month, onMonthChange, onAdd }: HistoryPageProps) {
       </div>
 
       {shown.length > 0 ? (
-        <TransactionList transactions={shown} onDelete={removeTransaction} grouped />
+        <TransactionList transactions={shown} onEdit={onEditTransaction} grouped />
       ) : (
         <Card>
           <EmptyState

@@ -21,13 +21,14 @@ import {
 } from '../lib/stats'
 import { useMoney } from '../store/useMoney'
 import type { Route } from '../hooks/useHashRoute'
-import type { WishItem } from '../types'
+import type { Transaction, WishItem } from '../types'
 
 interface DashboardPageProps {
   month: string
   onMonthChange(month: string): void
   onAdd(): void
   onEditItem(item: WishItem): void
+  onEditTransaction(transaction: Transaction): void
   onNavigate(route: Route): void
 }
 
@@ -36,6 +37,7 @@ export function DashboardPage({
   onMonthChange,
   onAdd,
   onEditItem,
+  onEditTransaction,
   onNavigate,
 }: DashboardPageProps) {
   const { data } = useMoney()
@@ -131,7 +133,7 @@ export function DashboardPage({
           }
         />
         {recent.length > 0 ? (
-          <TransactionList transactions={recent} />
+          <TransactionList transactions={recent} onEdit={onEditTransaction} />
         ) : (
           <EmptyState emoji="✏️" title="まだ記録がないよ" />
         )}

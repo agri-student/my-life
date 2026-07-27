@@ -13,7 +13,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import { ItemsPage } from './pages/ItemsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { useMoney } from './store/useMoney'
-import type { WishItem } from './types'
+import type { Transaction, WishItem } from './types'
 
 const TITLES: Record<Route, string> = {
   home: 'おこづかい帳',
@@ -24,7 +24,7 @@ const TITLES: Record<Route, string> = {
 
 /** 開いている入力シート */
 type Sheet =
-  | { type: 'transaction' }
+  | { type: 'transaction'; transaction?: Transaction }
   | { type: 'receipt' }
   | { type: 'item'; item?: WishItem }
   | null
@@ -45,6 +45,7 @@ export default function App() {
   }
 
   const openTransaction = () => setSheet({ type: 'transaction' })
+  const openEditTransaction = (transaction: Transaction) => setSheet({ type: 'transaction', transaction })
   const openReceipt = () => setSheet({ type: 'receipt' })
   const openItem = (item?: WishItem) => setSheet({ type: 'item', item })
   const closeSheet = () => setSheet(null)
@@ -83,22 +84,33 @@ export default function App() {
           onMonthChange={setMonth}
           onAdd={openTransaction}
           onEditItem={openItem}
+          onEditTransaction={openEditTransaction}
           onNavigate={navigate}
         />
       )}
       {route === 'items' && <ItemsPage onAddItem={() => openItem()} onEditItem={openItem} />}
       {route === 'history' && (
-        <HistoryPage month={month} onMonthChange={setMonth} onAdd={openTransaction} />
+        <HistoryPage
+          month={month}
+          onMonthChange={setMonth}
+          onAdd={openTransaction}
+          onEditTransaction={openEditTransaction}
+        />
       )}
       {route === 'settings' && <SettingsPage />}
 
       <BottomSheet
         open={sheet?.type === 'transaction'}
-        title="お金を記録する"
+        title={sheet?.type === 'transaction' && sheet.transaction ? '記録を直す' : 'お金を記録する'}
         onClose={closeSheet}
       >
         {sheet?.type === 'transaction' && (
-          <TransactionForm onDone={closeSheet} onOpenReceipt={openReceipt} />
+          <TransactionForm
+            key={sheet.transaction?.id ?? 'new'}
+            transaction={sheet.transaction}
+            onDone={closeSheet}
+            onOpenReceipt={openReceipt}
+          />
         )}
       </BottomSheet>
 
